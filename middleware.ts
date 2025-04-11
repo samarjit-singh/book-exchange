@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
 
   const isDashboard = pathname.startsWith("/dashboard");
   const isLoginOrRegister = pathname === "/login" || pathname === "/register";
-  const isBookDetails = /^\/books\/\d+$/i.test(pathname);
+  const isBookDetails = /^\/books\/[a-zA-Z0-9-]+$/.test(pathname);
 
   if ((isDashboard || isBookDetails) && !isAuth) {
     return NextResponse.redirect(new URL("/login", request.url));

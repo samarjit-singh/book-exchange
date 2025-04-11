@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,116 +10,61 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Search, Filter, BookOpen } from "lucide-react";
 import BookCard from "@/components/book-card";
 
-const allBooks = [
-  {
-    id: 1,
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    genre: "Classic",
-    location: "New York",
-    owner: "John Doe",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 2,
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    genre: "Fiction",
-    location: "Chicago",
-    owner: "Jane Smith",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 3,
-    title: "1984",
-    author: "George Orwell",
-    genre: "Dystopian",
-    location: "San Francisco",
-    owner: "Mike Johnson",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 4,
-    title: "Pride and Prejudice",
-    author: "Jane Austen",
-    genre: "Romance",
-    location: "Boston",
-    owner: "Sarah Williams",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 5,
-    title: "The Hobbit",
-    author: "J.R.R. Tolkien",
-    genre: "Fantasy",
-    location: "Seattle",
-    owner: "David Brown",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 6,
-    title: "Harry Potter and the Sorcerer's Stone",
-    author: "J.K. Rowling",
-    genre: "Fantasy",
-    location: "Portland",
-    owner: "Emily Davis",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 7,
-    title: "The Catcher in the Rye",
-    author: "J.D. Salinger",
-    genre: "Fiction",
-    location: "Los Angeles",
-    owner: "Michael Wilson",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-  {
-    id: 8,
-    title: "The Lord of the Rings",
-    author: "J.R.R. Tolkien",
-    genre: "Fantasy",
-    location: "Denver",
-    owner: "Jessica Taylor",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-  },
-];
+type Book = {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  location: string;
+  contact: string;
+  status: string;
+  imageUrl: string;
+  owner: {
+    name: string;
+    email: string;
+  };
+};
 
 export default function BooksPage() {
+  const [books, setBooks] = useState<Book[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [availableOnly, setAvailableOnly] = useState(false);
 
-  const genres = Array.from(new Set(allBooks.map((book) => book.genre)));
-  const locations = Array.from(new Set(allBooks.map((book) => book.location)));
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/books/all`)
+      .then((res) => res.json())
+      .then((data) => setBooks(data))
+      .catch((err) => console.error("Failed to fetch books:", err));
+  }, []);
 
-  const filteredBooks = allBooks.filter((book) => {
+  const genres = Array.from(new Set(books.map((book) => book.genre)));
+  const locations = Array.from(new Set(books.map((book) => book.location)));
+
+  const filteredBooks = books.filter((book) => {
     const matchesSearch =
       searchTerm === "" ||
       book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       book.author.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesGenre = selectedGenre === "" || book.genre === selectedGenre;
+    const matchesGenre =
+      selectedGenre === "" ||
+      selectedGenre === "all" ||
+      book.genre === selectedGenre;
 
     const matchesLocation =
-      selectedLocation === "" || book.location === selectedLocation;
+      selectedLocation === "" ||
+      selectedLocation === "all" ||
+      book.location === selectedLocation;
 
-    const matchesAvailability = !availableOnly || book.status === "Available";
+    const matchesAvailability =
+      !availableOnly || book.status.toLowerCase() === "available";
 
     return (
       matchesSearch && matchesGenre && matchesLocation && matchesAvailability
@@ -200,15 +145,18 @@ export default function BooksPage() {
             </Select>
           </div>
 
-          <div className="flex items-center space-x-2 pt-8">
-            <Checkbox
-              id="available"
-              checked={availableOnly}
-              onCheckedChange={(checked) =>
-                setAvailableOnly(checked as boolean)
-              }
-            />
-            <Label htmlFor="available">Show available books only</Label>
+          <div className="flex items-center justify-end pt-6">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedGenre("");
+                setSelectedLocation("");
+                setAvailableOnly(false);
+              }}
+            >
+              Reset Filters
+            </Button>
           </div>
         </div>
       )}

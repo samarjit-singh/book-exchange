@@ -1,23 +1,27 @@
-import Link from "next/link"
-import Image from "next/image"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { MapPin } from "lucide-react"
+import Link from "next/link";
+import Image from "next/image";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MapPin } from "lucide-react";
 
-interface Book {
-  id: number
-  title: string
-  author: string
-  genre: string
-  location: string
-  owner: string
-  status: string
-  coverUrl: string
-}
+type Book = {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  location: string;
+  contact: string;
+  status: string;
+  imageUrl: string;
+  owner: {
+    name: string;
+    email: string;
+  };
+};
 
 interface BookCardProps {
-  book: Book
+  book: Book;
 }
 
 const BookCard = ({ book }: BookCardProps) => {
@@ -25,8 +29,19 @@ const BookCard = ({ book }: BookCardProps) => {
     <Card className="overflow-hidden book-card">
       <CardContent className="p-0">
         <div className="relative h-64 w-full bg-muted">
-          <Image src={book.coverUrl || "/placeholder.svg"} alt={book.title} fill className="object-cover" />
-          <Badge variant="secondary" className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm">
+          <Image
+            src={
+              `${process.env.NEXT_PUBLIC_BASE_URL}${book.imageUrl}` ||
+              "/placeholder.svg"
+            }
+            alt={book.title}
+            fill
+            className="object-cover"
+          />
+          <Badge
+            variant="secondary"
+            className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm"
+          >
             {book.genre}
           </Badge>
         </div>
@@ -37,7 +52,9 @@ const BookCard = ({ book }: BookCardProps) => {
             <MapPin className="h-3 w-3" />
             <span>{book.location}</span>
           </div>
-          <p className="text-xs text-muted-foreground">Owner: {book.owner}</p>
+          <p className="text-xs text-muted-foreground">
+            Owner: {book.owner.name}
+          </p>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
@@ -48,7 +65,7 @@ const BookCard = ({ book }: BookCardProps) => {
         </Link>
       </CardFooter>
     </Card>
-  )
-}
+  );
+};
 
-export default BookCard
+export default BookCard;
