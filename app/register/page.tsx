@@ -1,130 +1,152 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, User } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookOpen, User } from "lucide-react";
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     mobile: "",
     password: "",
-    confirmPassword: "",
     role: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user types
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[name]
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
-  }
+  };
 
   const handleRoleChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, role: value }))
+    setFormData((prev) => ({ ...prev, role: value }));
     if (errors.role) {
       setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors.role
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors.role;
+        return newErrors;
+      });
     }
-  }
+  };
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
+      newErrors.name = "Name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
+      newErrors.email = "Email is invalid";
     }
 
     if (!formData.mobile.trim()) {
-      newErrors.mobile = "Mobile number is required"
+      newErrors.mobile = "Mobile number is required";
     } else if (!/^\d{10}$/.test(formData.mobile)) {
-      newErrors.mobile = "Mobile number must be 10 digits"
+      newErrors.mobile = "Mobile number must be 10 digits";
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     if (!formData.role) {
-      newErrors.role = "Please select a role"
+      newErrors.role = "Please select a role";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validateForm()) {
-      return
-    }
+    if (!validateForm()) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
+    setErrors({});
 
     try {
-      // Mock API call - replace with your actual API endpoint
-      // const response = await fetch('/api/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
 
-      // if (!response.ok) {
-      //   throw new Error('Registration failed');
-      // }
+      const result = await response.json();
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (!response.ok) {
+        if (response.status === 409) {
+          setErrors((prev) => ({
+            ...prev,
+            email: result.message || "Email already exists",
+          }));
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            form: result.message || "Something went wrong. Please try again.",
+          }));
+        }
+        return;
+      }
 
-      // Redirect to login page after successful registration
-      router.push("/login")
+      router.push("/login");
     } catch (error) {
-      console.error("Registration error:", error)
-      setErrors((prev) => ({ ...prev, form: "Registration failed. Please try again." }))
+      console.error("Registration error:", error);
+      setErrors((prev) => ({
+        ...prev,
+        form: "Registration failed. Please try again.",
+      }));
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="container max-w-md py-12">
       <Card>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Create an account</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            Create an account
+          </CardTitle>
           <CardDescription className="text-center">
             Enter your details to join our book exchange community
           </CardDescription>
@@ -142,7 +164,9 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className={errors.name ? "border-destructive" : ""}
                 />
-                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -156,7 +180,9 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className={errors.email ? "border-destructive" : ""}
                 />
-                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -169,7 +195,9 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className={errors.mobile ? "border-destructive" : ""}
                 />
-                {errors.mobile && <p className="text-sm text-destructive">{errors.mobile}</p>}
+                {errors.mobile && (
+                  <p className="text-sm text-destructive">{errors.mobile}</p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -182,54 +210,45 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className={errors.password ? "border-destructive" : ""}
                 />
-                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={errors.confirmPassword ? "border-destructive" : ""}
-                />
-                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="role">I want to</Label>
                 <Select onValueChange={handleRoleChange}>
-                  <SelectTrigger id="role" className={errors.role ? "border-destructive" : ""}>
+                  <SelectTrigger
+                    id="role"
+                    className={errors.role ? "border-destructive" : ""}
+                  >
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">
+                    <SelectItem value="OWNER">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4" />
                         <span>Share my books (Book Owner)</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="seeker">
+                    <SelectItem value="SEEKER">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         <span>Find books to read (Book Seeker)</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="both">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        <User className="h-4 w-4 ml-1" />
-                        <span>Both</span>
-                      </div>
-                    </SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.role && <p className="text-sm text-destructive">{errors.role}</p>}
+                {errors.role && (
+                  <p className="text-sm text-destructive">{errors.role}</p>
+                )}
               </div>
 
-              {errors.form && <p className="text-sm text-destructive text-center">{errors.form}</p>}
+              {errors.form && (
+                <p className="text-sm text-destructive text-center">
+                  {errors.form}
+                </p>
+              )}
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Creating account..." : "Create account"}
@@ -247,5 +266,5 @@ export default function RegisterPage() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
