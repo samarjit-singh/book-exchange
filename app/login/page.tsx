@@ -79,6 +79,10 @@ export default function LoginPage() {
         throw new Error(result.message || "Login failed");
       }
 
+      document.cookie = `service_session=${btoa(
+        JSON.stringify(result.user)
+      )}; path=/; max-age=${30 * 24 * 60 * 60};`;
+
       router.push("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
@@ -124,12 +128,6 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-accent hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
                 </div>
                 <Input
                   id="password"

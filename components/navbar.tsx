@@ -2,20 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Menu, X, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
-
-  // Mock authentication state - replace with actual auth check
-  const isLoggedIn = false;
+  const router = useRouter();
+  const { isLoggedIn } = useAuth();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
   };
 
   const navLinks = [
@@ -59,7 +65,7 @@ const Navbar = () => {
                   Dashboard
                 </Button>
               </Link>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleLogout}>
                 Log Out
               </Button>
             </div>
@@ -122,7 +128,11 @@ const Navbar = () => {
                   <User className="h-4 w-4" />
                   <span>Dashboard</span>
                 </Link>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleLogout}
+                >
                   Log Out
                 </Button>
               </>
