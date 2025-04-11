@@ -4,14 +4,17 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const cookie = request.cookies.get("service_session")?.value;
   const isAuth = !!cookie;
-
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/dashboard") && !isAuth) {
+  const isDashboard = pathname.startsWith("/dashboard");
+  const isLoginOrRegister = pathname === "/login" || pathname === "/register";
+  const isBookDetails = /^\/books\/\d+$/i.test(pathname);
+
+  if ((isDashboard || isBookDetails) && !isAuth) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if ((pathname === "/login" || pathname === "/register") && isAuth) {
+  if (isLoginOrRegister && isAuth) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -19,5 +22,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/login", "/register", "/books/:path*"],
 };
