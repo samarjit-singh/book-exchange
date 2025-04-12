@@ -75,6 +75,8 @@ export default function BookDetailPage({
 }) {
   const [book, setBook] = useState<Book | null>(null);
   const [exchangeDialogOpen, setExchangeDialogOpen] = useState(false);
+  const [exchangeType, setExchangeType] = useState("BORROW");
+  const [message, setMessage] = useState("");
 
   const { id } = use(params);
 
@@ -94,9 +96,46 @@ export default function BookDetailPage({
     fetchBook();
   }, [id]);
 
-  const handleExchangeRequest = () => {
-    console.log("Requesting exchange");
-    setExchangeDialogOpen(false);
+  const handleExchangeRequest = async () => {
+    try {
+      const sessionCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("service_session="));
+
+      if (!sessionCookie) {
+        throw new Error("User session not found.");
+      }
+
+      const encoded = sessionCookie.split("=")[1];
+      const user = JSON.parse(atob(encoded));
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bookId: book?.id,
+            senderId: user.id,
+            receiverId: book?.owner.id,
+            exchangeType,
+            message,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error || "Unknown error");
+
+      alert("Request sent successfully!");
+      setExchangeDialogOpen(false);
+    } catch (error) {
+      console.error("Exchange request failed:", error);
+      alert("Failed to send exchange request.");
+    }
   };
 
   if (!book) return <div className="p-8 text-center">Loading...</div>;
@@ -179,7 +218,6 @@ export default function BookDetailPage({
         </div>
       </div>
 
-      {/* Exchange Request Dialog */}
       <Dialog open={exchangeDialogOpen} onOpenChange={setExchangeDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -191,16 +229,16 @@ export default function BookDetailPage({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="exchange-type">Exchange Type</Label>
-              <Select defaultValue="borrow">
+              <Select value={exchangeType} onValueChange={setExchangeType}>
                 <SelectTrigger id="exchange-type">
                   <SelectValue placeholder="Select exchange type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="borrow">Borrow (Return Later)</SelectItem>
-                  <SelectItem value="exchange">
+                  <SelectItem value="BORROW">Borrow (Return Later)</SelectItem>
+                  <SelectItem value="EXCHANGE_WITH_MY_BOOK">
                     Exchange with My Book
                   </SelectItem>
-                  <SelectItem value="purchase">Purchase</SelectItem>
+                  <SelectItem value="PURCHASE">Purchase</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -210,6 +248,8 @@ export default function BookDetailPage({
                 id="exchange-message"
                 placeholder="Add any details about your exchange request..."
                 rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
               />
             </div>
           </div>
