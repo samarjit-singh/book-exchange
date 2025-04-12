@@ -63,7 +63,9 @@ export default function MyBooks() {
         const encoded = sessionCookie.split("=")[1];
         const user = JSON.parse(atob(encoded));
 
-        const res = await fetch(`http://localhost:3000/books/user/${user.id}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/books/user/${user.id}`
+        );
         const data = await res.json();
         setBooks(data);
       } catch (err) {
@@ -85,9 +87,25 @@ export default function MyBooks() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (bookToDelete) {
+  const confirmDelete = async () => {
+    if (!bookToDelete) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/books/${bookToDelete}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to delete book");
+      }
+
       setBooks((prev) => prev.filter((book) => book.id !== bookToDelete));
+    } catch (err) {
+      console.error("Error deleting book:", err);
+    } finally {
       setDeleteDialogOpen(false);
       setBookToDelete(null);
     }
