@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -33,14 +32,13 @@ export default function AddBookPage() {
     title: "",
     author: "",
     genre: "",
-    description: "",
-    condition: "",
-    publisher: "",
-    publishedYear: "",
-    pages: "",
-    status: "Available",
+    location: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const sessionCookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("service_session="));
 
   const genres = [
     "Fiction",
@@ -61,14 +59,11 @@ export default function AddBookPage() {
     "Other",
   ];
 
-  const conditions = ["New", "Like New", "Very Good", "Good", "Fair", "Poor"];
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -115,18 +110,6 @@ export default function AddBookPage() {
       newErrors.genre = "Genre is required";
     }
 
-    if (!formData.condition) {
-      newErrors.condition = "Condition is required";
-    }
-
-    if (formData.publishedYear && !/^\d{4}$/.test(formData.publishedYear)) {
-      newErrors.publishedYear = "Please enter a valid 4-digit year";
-    }
-
-    if (formData.pages && !/^\d+$/.test(formData.pages)) {
-      newErrors.pages = "Please enter a valid number";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -134,27 +117,64 @@ export default function AddBookPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      // const response = await fetch('/api/books', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     ...formData,
-      //     coverImage,
-      //   }),
-      // });
+      let imageUrl = "";
 
-      // if (!response.ok) {
-      //   throw new Error('Failed to add book');
-      // }
+      if (coverImage) {
+        const fileInput = document.getElementById(
+          "cover-image"
+        ) as HTMLInputElement;
+        const file = fileInput?.files?.[0];
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (file) {
+          const imageForm = new FormData();
+          imageForm.append("image", file);
+
+          const uploadResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/books/image`,
+            {
+              method: "POST",
+              body: imageForm,
+            }
+          );
+
+          if (!uploadResponse.ok) {
+            throw new Error("Image upload failed");
+          }
+
+          const uploadData = await uploadResponse.json();
+          imageUrl = uploadData.imageUrl;
+        }
+      }
+
+      if (sessionCookie) {
+        const encoded = sessionCookie.split("=")[1];
+        const user = JSON.parse(atob(encoded));
+
+        const bookPayload = {
+          ...formData,
+          contact: user.email,
+          ownerId: user.id,
+          imageUrl,
+        };
+
+        const createResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/books/create`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bookPayload),
+          }
+        );
+
+        if (!createResponse.ok) {
+          throw new Error("Failed to add book");
+        }
+      }
 
       router.push("/dashboard");
     } catch (error) {
@@ -306,99 +326,15 @@ export default function AddBookPage() {
                         </p>
                       )}
                     </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="condition">
-                        Condition <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.condition}
-                        onValueChange={(value) =>
-                          handleSelectChange("condition", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="condition"
-                          className={
-                            errors.condition ? "border-destructive" : ""
-                          }
-                        >
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {conditions.map((condition) => (
-                            <SelectItem key={condition} value={condition}>
-                              {condition}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.condition && (
-                        <p className="text-sm text-destructive">
-                          {errors.condition}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Enter book description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="publisher">Publisher</Label>
+                    <div>
+                      <Label htmlFor="location">Location</Label>
                       <Input
-                        id="publisher"
-                        name="publisher"
-                        placeholder="Publisher name"
-                        value={formData.publisher}
+                        id="location"
+                        name="location"
+                        placeholder="Location"
+                        value={formData.location}
                         onChange={handleChange}
                       />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="publishedYear">Published Year</Label>
-                      <Input
-                        id="publishedYear"
-                        name="publishedYear"
-                        placeholder="e.g. 2020"
-                        value={formData.publishedYear}
-                        onChange={handleChange}
-                        className={
-                          errors.publishedYear ? "border-destructive" : ""
-                        }
-                      />
-                      {errors.publishedYear && (
-                        <p className="text-sm text-destructive">
-                          {errors.publishedYear}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="pages">Number of Pages</Label>
-                      <Input
-                        id="pages"
-                        name="pages"
-                        placeholder="e.g. 320"
-                        value={formData.pages}
-                        onChange={handleChange}
-                        className={errors.pages ? "border-destructive" : ""}
-                      />
-                      {errors.pages && (
-                        <p className="text-sm text-destructive">
-                          {errors.pages}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>

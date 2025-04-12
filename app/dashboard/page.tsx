@@ -6,11 +6,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Plus, BookText, Repeat, User } from "lucide-react";
+import { BookOpen, Plus, Repeat } from "lucide-react";
 import MyBooks from "@/components/dashboard/my-books";
 import BookRequests from "@/components/dashboard/book-requests";
-import UserProfile from "@/components/dashboard/user-profile";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("my-books");
@@ -33,46 +31,6 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Books</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold">12</div>
-                <BookText className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Exchanges
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold">3</div>
-                <Repeat className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Pending Requests
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold">5</div>
-                <MessageSquare className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <Tabs
           defaultValue="my-books"
           value={activeTab}
@@ -88,19 +46,12 @@ export default function DashboardPage() {
               <Repeat className="h-4 w-4" />
               <span className="hidden sm:inline">Exchange Requests</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
           </TabsList>
           <TabsContent value="my-books" className="space-y-4">
             <MyBooks />
           </TabsContent>
           <TabsContent value="requests" className="space-y-4">
             <BookRequests />
-          </TabsContent>
-          <TabsContent value="profile" className="space-y-4">
-            <UserProfile />
           </TabsContent>
         </Tabs>
       </div>
