@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -28,51 +28,51 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Pencil, MoreVertical, Trash2, Eye, AlertCircle } from "lucide-react";
 
-// Mock data for user's books
-const myBooks = [
-  {
-    id: 1,
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    genre: "Classic",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-    addedDate: "2023-10-15",
-  },
-  {
-    id: 2,
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    genre: "Fiction",
-    status: "Exchanged",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-    addedDate: "2023-09-22",
-  },
-  {
-    id: 3,
-    title: "1984",
-    author: "George Orwell",
-    genre: "Dystopian",
-    status: "Available",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-    addedDate: "2023-11-05",
-  },
-  {
-    id: 4,
-    title: "Pride and Prejudice",
-    author: "Jane Austen",
-    genre: "Romance",
-    status: "Pending",
-    coverUrl: "/placeholder.svg?height=280&width=200",
-    addedDate: "2023-12-01",
-  },
-];
+type Book = {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  location?: string;
+  contact?: string;
+  status: string;
+  imageUrl: string;
+  addedDate?: string;
+  owner: {
+    id: string;
+    name: string;
+    email: string;
+    mobile: string;
+  };
+};
 
 export default function MyBooks() {
-  const [books, setBooks] = useState(myBooks);
+  const [books, setBooks] = useState<Book[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<number | null>(null);
+  const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const sessionCookie = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("service_session="));
+        if (!sessionCookie) return;
+
+        const encoded = sessionCookie.split("=")[1];
+        const user = JSON.parse(atob(encoded));
+
+        const res = await fetch(`http://localhost:3000/books/user/${user.id}`);
+        const data = await res.json();
+        setBooks(data);
+      } catch (err) {
+        console.error("Failed to fetch books:", err);
+      }
+    };
+
+    fetchBooks();
+  }, []);
 
   const filteredBooks = books.filter(
     (book) =>
@@ -80,14 +80,14 @@ export default function MyBooks() {
       book.author.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDeleteClick = (bookId: number) => {
+  const handleDeleteClick = (bookId: string) => {
     setBookToDelete(bookId);
     setDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
     if (bookToDelete) {
-      setBooks(books.filter((book) => book.id !== bookToDelete));
+      setBooks((prev) => prev.filter((book) => book.id !== bookToDelete));
       setDeleteDialogOpen(false);
       setBookToDelete(null);
     }
@@ -113,13 +113,13 @@ export default function MyBooks() {
             Exchanged
           </Badge>
         );
-      case "Pending":
+      case "RENTED":
         return (
           <Badge
             variant="outline"
             className="bg-yellow-50 text-yellow-700 border-yellow-200"
           >
-            Pending
+            Rented
           </Badge>
         );
       default:
@@ -148,7 +148,10 @@ export default function MyBooks() {
               <CardHeader className="p-0">
                 <div className="relative h-48 w-full bg-muted">
                   <Image
-                    src={book.coverUrl || "/placeholder.svg"}
+                    src={
+                      `${process.env.NEXT_PUBLIC_BASE_URL}${book.imageUrl}` ||
+                      "/placeholder.svg"
+                    }
                     alt={book.title}
                     fill
                     className="object-cover"
@@ -202,7 +205,6 @@ export default function MyBooks() {
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{book.genre}</span>
-                  {/* <span>Added: {new Date(book.addedDate).toLocaleDateString()}</span> */}
                 </div>
               </CardContent>
               <CardFooter className="p-4 pt-0 flex justify-between">

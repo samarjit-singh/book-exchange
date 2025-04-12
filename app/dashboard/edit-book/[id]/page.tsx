@@ -2,9 +2,10 @@
 
 import type React from "react";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,38 +25,24 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Upload, BookOpen } from "lucide-react";
 
-const bookData = {
-  id: 1,
-  title: "The Great Gatsby",
-  author: "F. Scott Fitzgerald",
-  genre: "Classic",
-  description:
-    "The Great Gatsby is a 1925 novel by American writer F. Scott Fitzgerald. Set in the Jazz Age on Long Island, the novel depicts narrator Nick Carraway's interactions with mysterious millionaire Jay Gatsby and Gatsby's obsession to reunite with his former lover, Daisy Buchanan.",
-  condition: "Good",
-  publisher: "Charles Scribner's Sons",
-  publishedYear: "1925",
-  pages: "180",
-  status: "Available",
-  coverUrl: "/placeholder.svg?height=400&width=300",
-};
-
-export default function EditBookPage({ params }: { params: { id: string } }) {
+export default function EditBookPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     author: "",
     genre: "",
-    description: "",
-    condition: "",
-    publisher: "",
-    publishedYear: "",
-    pages: "",
-    status: "Available",
+    location: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const sessionCookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("service_session="));
+
+  const params = useParams();
+  const bookId = params.id as string;
 
   const genres = [
     "Fiction",
@@ -77,43 +63,35 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
     "Other",
   ];
 
-  const conditions = ["New", "Like New", "Very Good", "Good", "Fair", "Poor"];
-
-  const statuses = ["Available", "Exchanged", "Pending"];
-
-  // Simulate fetching book data
   useEffect(() => {
-    // In a real app, you would fetch the book data from your API
-    // const fetchBook = async () => {
-    //   try {
-    //     const response = await fetch(`/api/books/${params.id}`);
-    //     if (!response.ok) throw new Error('Failed to fetch book');
-    //     const data = await response.json();
-    //     setFormData(data);
-    //     setCoverImage(data.coverUrl);
-    //   } catch (error) {
-    //     console.error('Error fetching book:', error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
+    async function fetchBook() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/books/${bookId}`
+        );
+        const data = await res.json();
 
-    // fetchBook();
+        setFormData({
+          title: data.title,
+          author: data.author,
+          genre: data.genre,
+          location: data.location,
+        });
 
-    // Simulate API call with mock data
-    setTimeout(() => {
-      setFormData(bookData);
-      setCoverImage(bookData.coverUrl);
-      setIsLoading(false);
-    }, 500);
-  }, [params.id]);
+        setCoverImage(data.imageUrl);
+      } catch (err) {
+        console.error("Failed to fetch book:", err);
+      }
+    }
+
+    if (bookId) fetchBook();
+  }, [bookId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -160,18 +138,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
       newErrors.genre = "Genre is required";
     }
 
-    if (!formData.condition) {
-      newErrors.condition = "Condition is required";
-    }
-
-    if (formData.publishedYear && !/^\d{4}$/.test(formData.publishedYear)) {
-      newErrors.publishedYear = "Please enter a valid 4-digit year";
-    }
-
-    if (formData.pages && !/^\d+$/.test(formData.pages)) {
-      newErrors.pages = "Please enter a valid number";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -179,55 +145,82 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      // Mock API call - replace with your actual API endpoint
-      // const response = await fetch(`/api/books/${params.id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     ...formData,
-      //     coverImage,
-      //   }),
-      // });
+      let imageUrl = "";
 
-      // if (!response.ok) {
-      //   throw new Error('Failed to update book');
-      // }
+      if (coverImage) {
+        const fileInput = document.getElementById(
+          "cover-image"
+        ) as HTMLInputElement;
+        const file = fileInput?.files?.[0];
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (file) {
+          const imageForm = new FormData();
+          imageForm.append("image", file);
 
-      // Redirect to dashboard after successful submission
+          const uploadResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/books/image`,
+            {
+              method: "POST",
+              body: imageForm,
+            }
+          );
+
+          if (!uploadResponse.ok) {
+            throw new Error("Image upload failed");
+          }
+
+          const uploadData = await uploadResponse.json();
+          imageUrl = uploadData.imageUrl;
+        }
+      }
+
+      if (!imageUrl && coverImage) {
+        imageUrl = coverImage;
+      }
+
+      if (sessionCookie) {
+        const encoded = sessionCookie.split("=")[1];
+        const user = JSON.parse(atob(encoded));
+
+        const bookPayload = {
+          ...formData,
+          contact: user.email,
+          ownerId: user.id,
+          imageUrl,
+        };
+
+        const createResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/books/${bookId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bookPayload),
+          }
+        );
+
+        if (!createResponse.ok) {
+          throw new Error("Failed to add book");
+        }
+      }
+
       router.push("/dashboard");
     } catch (error) {
-      console.error("Error updating book:", error);
+      console.error("Error adding book:", error);
       setErrors((prev) => ({
         ...prev,
-        form: "Failed to update book. Please try again.",
+        form: "Failed to add book. Please try again.",
       }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="container max-w-4xl py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <BookOpen className="h-12 w-12 text-muted-foreground animate-pulse mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading book details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  console.log("coverImage", `${process.env.NEXT_PUBLIC_BASE_URL}${coverImage}`);
 
   return (
     <div className="container max-w-4xl py-8">
@@ -242,7 +235,9 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Edit Book</CardTitle>
-          <CardDescription>Update your book information</CardDescription>
+          <CardDescription>
+            Update your book's information for exchange or rental
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -252,7 +247,10 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
                   <div className="w-full aspect-[2/3] bg-muted rounded-md flex flex-col items-center justify-center overflow-hidden relative">
                     {coverImage ? (
                       <img
-                        src={coverImage || "/placeholder.svg"}
+                        src={
+                          `${process.env.NEXT_PUBLIC_BASE_URL}${coverImage}` ||
+                          "/placeholder.svg"
+                        }
                         alt="Book cover preview"
                         className="w-full h-full object-cover"
                       />
@@ -365,120 +363,15 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
                         </p>
                       )}
                     </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="condition">
-                        Condition <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.condition}
-                        onValueChange={(value) =>
-                          handleSelectChange("condition", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="condition"
-                          className={
-                            errors.condition ? "border-destructive" : ""
-                          }
-                        >
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {conditions.map((condition) => (
-                            <SelectItem key={condition} value={condition}>
-                              {condition}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.condition && (
-                        <p className="text-sm text-destructive">
-                          {errors.condition}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Book Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) =>
-                        handleSelectChange("status", value)
-                      }
-                    >
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statuses.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Enter book description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="publisher">Publisher</Label>
+                    <div>
+                      <Label htmlFor="location">Location</Label>
                       <Input
-                        id="publisher"
-                        name="publisher"
-                        placeholder="Publisher name"
-                        value={formData.publisher}
+                        id="location"
+                        name="location"
+                        placeholder="Location"
+                        value={formData.location}
                         onChange={handleChange}
                       />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="publishedYear">Published Year</Label>
-                      <Input
-                        id="publishedYear"
-                        name="publishedYear"
-                        placeholder="e.g. 2020"
-                        value={formData.publishedYear}
-                        onChange={handleChange}
-                        className={
-                          errors.publishedYear ? "border-destructive" : ""
-                        }
-                      />
-                      {errors.publishedYear && (
-                        <p className="text-sm text-destructive">
-                          {errors.publishedYear}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="pages">Number of Pages</Label>
-                      <Input
-                        id="pages"
-                        name="pages"
-                        placeholder="e.g. 320"
-                        value={formData.pages}
-                        onChange={handleChange}
-                        className={errors.pages ? "border-destructive" : ""}
-                      />
-                      {errors.pages && (
-                        <p className="text-sm text-destructive">
-                          {errors.pages}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -500,7 +393,7 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving Changes..." : "Save Changes"}
+                {isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>
